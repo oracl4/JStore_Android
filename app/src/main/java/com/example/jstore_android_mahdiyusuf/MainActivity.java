@@ -33,9 +33,6 @@ public class MainActivity extends AppCompatActivity {
         expListView = (ExpandableListView) findViewById(R.id.lvExp);
 
         refreshList();
-
-        listAdapter = new MainListAdapter(MainActivity.this, listSupplier, childMapping);
-        expListView.setAdapter(listAdapter);
     }
 
     protected void refreshList() {
@@ -45,42 +42,64 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     JSONArray jsonResponse = new JSONArray(response);
                     for (int i=0; i<jsonResponse.length(); i++) {
+                        AlertDialog.Builder builder1 = new AlertDialog.Builder(MainActivity.this);
+
                         JSONObject item = jsonResponse.getJSONObject(i);
-
-                        int idItem = item.getInt("id");
-                        String nameItem = item.getString("name");
-                        int priceItem = item.getInt("price");
-                        String categoryItem = item.getString("category");
-                        String statusItem = item.getString("status");
-
                         JSONObject supplier = item.getJSONObject("supplier");
-
-                        int idSupplier = supplier.getInt("id");
-                        String nameSupplier = supplier.getString("name");
-                        String emailSupplier = supplier.getString("email");
-                        String phoneNumberSupplier = supplier.getString("phoneNumber");
-
                         JSONObject location = supplier.getJSONObject("location");
 
-                        String provinceLocation = supplier.getString("province");
-                        String descriptionLocation = supplier.getString("description");
-                        String cityLocation = supplier.getString("city");
+                        Location newLocation = new Location(
+                                location.getString("province"),
+                                location.getString("description"),
+                                location.getString("city")
+                        );
 
-                        Location locationTemp = new Location(provinceLocation, descriptionLocation, cityLocation);
-                        Supplier supplierTemp = new Supplier(idSupplier, nameSupplier, emailSupplier, phoneNumberSupplier, locationTemp);
-                        Item itemTemp = new Item(idItem, nameItem, priceItem, categoryItem, statusItem, supplierTemp);
+                        Supplier newSupplier = new Supplier(
+                                supplier.getInt("id"),
+                                supplier.getString("name"),
+                                supplier.getString("email"),
+                                supplier.getString("phoneNumber"),
+                                newLocation
+                        );
 
-                        listSupplier.add(supplierTemp);
-                        listItem.add(itemTemp);
+                        Item newItem = new Item(
+                                item.getInt("id"),
+                                item.getString("name"),
+                                item.getInt("price"),
+                                item.getString("category"),
+                                item.getString("status"),
+                                newSupplier
+                        );
 
-                        childMapping.put(listSupplier.get(i), listItem);
+                        listItem.add(newItem);
+
+                        //Check if the Supplier already Exists
+                        boolean tempStatus = true;
+                        for(Supplier supplierPtr : listSupplier) {
+                            if(supplierPtr.getId() == newSupplier.getId()){
+                                tempStatus = false;
+                            }
+                        }
+                        if(tempStatus==true){
+                            listSupplier.add(newSupplier);
+                        }
                     }
+
+                    for(Supplier supplierPtr : listSupplier){
+                        ArrayList<Item> tempItemList = new ArrayList<>();
+                        for(Item itemPtr : listItem){
+                            if(itemPtr.getSupplier().getId() == supplierPtr.getId()){
+                                tempItemList.add(itemPtr);
+                            }
+                        }
+                        childMapping.put(supplierPtr, tempItemList);
+                    }
+                    listAdapter = new MainListAdapter(MainActivity.this, listSupplier, childMapping);
+                    expListView.setAdapter(listAdapter);
                 }
                 catch (JSONException e) {
                     AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                    builder.setMessage("Load Data Failed.")
-                            .create()
-                            .show();
+                    builder.setMessage("Load Data Failed.").create().show();
                 }
             }
         };
